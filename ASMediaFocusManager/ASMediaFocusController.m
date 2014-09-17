@@ -8,6 +8,7 @@
 
 #import "ASMediaFocusController.h"
 #import <QuartzCore/QuartzCore.h>
+#import <MotionOrientation@PTEz/MotionOrientation.h>
 
 static NSTimeInterval const kDefaultOrientationAnimationDuration = 0.4;
 
@@ -36,6 +37,9 @@ static NSTimeInterval const kDefaultOrientationAnimationDuration = 0.4;
     self.titleLabel.layer.shadowOffset = CGSizeZero;
     self.titleLabel.layer.shadowRadius = 1;
     self.accessoryView.alpha = 0;
+	[MotionOrientation initialize];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(orientationDidChangeNotification:) name:MotionOrientationChangedNotification object:nil];
+
 }
 
 - (void)viewDidUnload
@@ -45,41 +49,9 @@ static NSTimeInterval const kDefaultOrientationAnimationDuration = 0.4;
     [super viewDidUnload];
 }
 
-- (void)viewDidAppear:(BOOL)animated
+- (void)dealloc
 {
-    [super viewDidAppear:animated];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(orientationDidChangeNotification:) name:UIDeviceOrientationDidChangeNotification object:nil];
-    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-}
-
-- (void)viewWillDisappear:(BOOL)animated
-{
-    [super viewWillDisappear:animated];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
-    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-}
-
-- (NSUInteger)supportedInterfaceOrientations
-{
-    return UIInterfaceOrientationMaskPortrait;
-}
-
-- (BOOL)isParentSupportingInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
-{
-    switch(toInterfaceOrientation)
-    {
-        case UIInterfaceOrientationPortrait:
-            return [self.parentViewController supportedInterfaceOrientations] & UIInterfaceOrientationMaskPortrait;
-            
-        case UIInterfaceOrientationPortraitUpsideDown:
-            return [self.parentViewController supportedInterfaceOrientations] & UIInterfaceOrientationMaskPortraitUpsideDown;
-            
-        case UIInterfaceOrientationLandscapeLeft:
-            return [self.parentViewController supportedInterfaceOrientations] & UIInterfaceOrientationMaskLandscapeLeft;
-            
-        case UIInterfaceOrientationLandscapeRight:
-            return [self.parentViewController supportedInterfaceOrientations] & UIInterfaceOrientationMaskLandscapeRight;
-    }
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:MotionOrientationChangedNotification object:nil];
 }
 
 #pragma mark - Public
@@ -89,60 +61,52 @@ static NSTimeInterval const kDefaultOrientationAnimationDuration = 0.4;
     CGRect frame;
     NSTimeInterval duration = kDefaultOrientationAnimationDuration;
     
-    if([UIDevice currentDevice].orientation == self.previousOrientation)
+    if([MotionOrientation sharedInstance].deviceOrientation == self.previousOrientation)
         return;
     
-    if((UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation) && UIDeviceOrientationIsLandscape(self.previousOrientation))
-       || (UIDeviceOrientationIsPortrait([UIDevice currentDevice].orientation) && UIDeviceOrientationIsPortrait(self.previousOrientation)))
+    if((UIDeviceOrientationIsLandscape([MotionOrientation sharedInstance].deviceOrientation) && UIDeviceOrientationIsLandscape(self.previousOrientation))
+       || (UIDeviceOrientationIsPortrait([MotionOrientation sharedInstance].deviceOrientation) && UIDeviceOrientationIsPortrait(self.previousOrientation)))
     {
         duration *= 2;
     }
     
-    if(([UIDevice currentDevice].orientation == UIDeviceOrientationPortrait)
-       || [self isParentSupportingInterfaceOrientation:[UIDevice currentDevice].orientation])
-    {
-        transform = CGAffineTransformIdentity;
-    }
-    else
-    {
-        switch ([UIDevice currentDevice].orientation)
-        {
-            case UIDeviceOrientationLandscapeRight:
-                if(self.parentViewController.interfaceOrientation == UIInterfaceOrientationPortrait)
-                {
-                    transform = CGAffineTransformMakeRotation(-M_PI_2);
-                }
-                else
-                {
-                    transform = CGAffineTransformMakeRotation(M_PI_2);
-                }
-                break;
+	switch ([MotionOrientation sharedInstance].deviceOrientation)
+	{
+		case UIDeviceOrientationLandscapeRight:
+			if(self.parentViewController.interfaceOrientation == UIInterfaceOrientationPortrait)
+			{
+				transform = CGAffineTransformMakeRotation(-M_PI_2);
+			}
+			else
+			{
+				transform = CGAffineTransformMakeRotation(M_PI_2);
+			}
+			break;
                 
-            case UIDeviceOrientationLandscapeLeft:
-                if(self.parentViewController.interfaceOrientation == UIInterfaceOrientationPortrait)
-                {
-                    transform = CGAffineTransformMakeRotation(M_PI_2);
-                }
-                else
-                {
-                    transform = CGAffineTransformMakeRotation(-M_PI_2);
-                }
-                break;
+		case UIDeviceOrientationLandscapeLeft:
+			if(self.parentViewController.interfaceOrientation == UIInterfaceOrientationPortrait)
+			{
+				transform = CGAffineTransformMakeRotation(M_PI_2);
+			}
+			else
+			{
+				transform = CGAffineTransformMakeRotation(-M_PI_2);
+			}
+			break;
                 
-            case UIDeviceOrientationPortrait:
-                transform = CGAffineTransformIdentity;
-                break;
+		case UIDeviceOrientationPortrait:
+			transform = CGAffineTransformIdentity;
+			break;
                 
-            case UIDeviceOrientationPortraitUpsideDown:
-                transform = CGAffineTransformMakeRotation(M_PI);
-                break;
+		case UIDeviceOrientationPortraitUpsideDown:
+			transform = CGAffineTransformMakeRotation(M_PI);
+			break;
                 
-            case UIDeviceOrientationFaceDown:
-            case UIDeviceOrientationFaceUp:
-            case UIDeviceOrientationUnknown:
-                return;
-        }
-    }
+		case UIDeviceOrientationFaceDown:
+		case UIDeviceOrientationFaceUp:
+		case UIDeviceOrientationUnknown:
+			return;
+	}
     
     if(animated)
     {
@@ -159,7 +123,7 @@ static NSTimeInterval const kDefaultOrientationAnimationDuration = 0.4;
         self.contentView.transform = transform;
         self.contentView.frame = frame;
     }
-    self.previousOrientation = [UIDevice currentDevice].orientation;
+    self.previousOrientation = [MotionOrientation sharedInstance].deviceOrientation;
 }
 
 - (void)installZoomView
