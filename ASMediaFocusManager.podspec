@@ -16,4 +16,7 @@ Pod::Spec.new do |s|
   s.resources = 'ASMediaFocusManager/*.{xib}'
   s.frameworks = 'UIKit', 'Foundation', 'CoreGraphics'
   s.requires_arc = true
+
+	s.dependency 'MotionOrientation@PTEz', '~> 1.1.0'
+
 end
