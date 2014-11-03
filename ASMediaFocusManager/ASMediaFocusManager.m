@@ -161,8 +161,10 @@ static CGFloat const kAnimationDuration = 0.5;
         NSError *error = nil;
         
         url = [self.delegate mediaFocusManager:self mediaURLForView:mediaView];
+				if (url == nil) return;
+		
         data = [NSData dataWithContentsOfURL:url options:0 error:&error];
-        if(error != nil)
+				if(error != nil)
         {
             NSLog(@"Warning: Unable to load image at %@. %@", url, error);
         }
